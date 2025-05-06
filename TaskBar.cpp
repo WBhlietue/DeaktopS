@@ -7,10 +7,19 @@
 using namespace std;
 
 int a =0 ;
+int buttonSize = 40;
+int buttonOffset = 5;
+HWND thisHwnd;
+typedef struct{
+    HWND windowTitle;
+    HWND button;
+}WindowTitleSet;
 
-
+vector<WindowTitleSet> titles;
+vector<HWND> hwnds;
 
 BOOL IsAltTabWindow(HWND hwnd) {
+    if(hwnd == thisHwnd) return FALSE;
     if (!IsWindowVisible(hwnd)) return FALSE;
     if (GetWindow(hwnd, GW_OWNER) != NULL) return FALSE;
     char title[256];
@@ -20,6 +29,7 @@ BOOL IsAltTabWindow(HWND hwnd) {
     return FALSE;
     LONG style = GetWindowLong(hwnd, GWL_EXSTYLE);
     if (style & WS_EX_TOOLWINDOW) return FALSE;
+
 
     return TRUE;
 }
@@ -38,54 +48,75 @@ BOOL CALLBACK EnumWindowsProcCheck(HWND hwnd, LPARAM lParam) {
     }
     return TRUE;
 }
+HICON GetWindowIcon(HWND hwnd) {
+    HICON hIcon = (HICON)SendMessage(hwnd, WM_GETICON, ICON_BIG, 0);
+    if (!hIcon) {
+        hIcon = (HICON)GetClassLongPtr(hwnd, GCLP_HICON);
+    }
+    return hIcon;
+}
 
-typedef struct{
-    HWND windowTitle;
-    HWND button;
-}WindowTitleSet;
+void RePosAnsSize(Window window){
+    int height = 2*buttonOffset + buttonSize;
+    int width = 2*buttonOffset + buttonSize*titles.size() + buttonOffset*(titles.size()-1);
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    SetWindowPos(window.hwnd, HWND_TOP, (screenWidth-width)/2, screenHeight-height, width, height,   SWP_NOZORDER);
+    for(int i = 0; i < titles.size(); i++){
+        SetWindowPos(titles[i].button, HWND_TOP, buttonOffset+i*(buttonSize+buttonOffset) , buttonOffset, buttonSize, buttonSize, SWP_NOSIZE);
+    }
+}
 
-vector<WindowTitleSet> titles;
-vector<HWND> hwnds;
-
+int AddButton(Window* window, int i){
+    int id = window->GenerateId();
+    HICON hIcon = GetWindowIcon(hwnds[i]);
+    hIcon = window->ResizeImage(hIcon, 32, 32);
+    window->CreateButton(id, hIcon, 0, 0, buttonSize, buttonSize);
+    window->AddOnClick(id, [ i](){
+        HWND hwnd = hwnds[i];
+        if (IsIconic(hwnd)) {
+            ShowWindow(hwnd, SW_RESTORE);
+        } else {
+            ShowWindow(hwnd, SW_MINIMIZE);
+        }
+    });
+    return id;
+}
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     Window::Init(hInstance, nCmdShow);
     Window window;
     window.onCreate = [&window](){
+        thisHwnd = window.hwnd;
+        SetWindowPos(
+            window.hwnd,
+            HWND_TOPMOST,  
+            0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE  
+        );
+
         EnumWindows(EnumWindowsProc, (LPARAM)&hwnds);
         for (int i = 0; i < hwnds.size(); i++) {
             wstring title(256, L'\0');
             GetWindowTextW(hwnds[i], &title[0], title.size());
-            int id = window.GenerateId();
-            window.CreateButton(id, title, 100, 50*i+50, 300, 30);
+            int id = AddButton(&window, i);
             WindowTitleSet set;
             set.windowTitle = hwnds[i];
             set.button = window.GetElement(id);
             titles.push_back(set);
         }
+        RePosAnsSize(window);
         Window::onTimer.push_back([ &window](){
+            bool isChange = false;
             for(int i = 0; i < hwnds.size(); i++){
+                
                 while(!IsWindow(hwnds[i])){
                     DestroyWindow(titles[i].button);
                     hwnds.erase(hwnds.begin() + i);
                     titles.erase(titles.begin() + i);
-                    for(int j = i; j < titles.size(); j++){
-                        RECT rect;
-                        GetWindowRect (titles[j].button, &rect);
-                        POINT pt = {rect.left, rect.top};  
-                        ScreenToClient(window.hwnd, &pt);  
-                        SetWindowPos(titles[j].button, HWND_TOP, pt.x, pt.y-50, 0, 0, SWP_NOSIZE);
-                    }
-                }
-                if(IsWindow(hwnds[i])){
-                    wstring title(256, L'\0');
-                    GetWindowTextW(hwnds[i], &title[0], title.size());
-                    wstring title2(256, L'\0');
-                    GetWindowTextW(titles[i].button, &title2[0], title2.size());
-                    if(title != title2){
-                        SetWindowTextW(titles[i].button, title.c_str());
-                    }
+                    i--;
+                    isChange = true;
                 }
             }
             int num1 = hwnds.size();
@@ -93,21 +124,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             int num2 = hwnds.size();
             if(num2 > num1){
                 for(int i = num1; i<num2; i++){
-                    cout << "Asd" << endl;
                     wstring title(256, L'\0');
                     GetWindowTextW(hwnds[i], &title[0], title.size());
-                    int id = window.GenerateId();
-                    window.CreateButton(id, title, 100, 50*i+50, 300, 30);
+                    int id = AddButton(&window, i);
                     WindowTitleSet set;
                     set.windowTitle = hwnds[i];
                     set.button = window.GetElement(id);
                     titles.push_back(set);
+                    isChange = true;
                 }
+            }
+            if(isChange){
+                RePosAnsSize(window);
             }
 
         });
     };
-    window.Show("asdasd", 500, 600, 16);
+    window.Show("asdasd", 100, 50, WS_POPUP, 16 );
     return 0;
 
 }

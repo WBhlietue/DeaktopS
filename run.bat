@@ -1,1 +1,2 @@
-g++ base.cpp main.cpp -o main; ./main
+g++ TaskBar.cpp main.cpp -o main
+main

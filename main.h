@@ -30,18 +30,12 @@ public:
         nCmdShow = cmd;
         classCount = 0;
     }
-    void Show(const char* windowName, int width, int height, int ms=-1);
+    void Show(const char* windowName, int width, int height,int type, int ms=-1);
     void CreateButton(int id, std::wstring text, int x, int y, int width, int height);
+    void CreateButton(int id, HICON icon, int x, int y, int width, int height);
     void CreateLabel(int id, std::string text, int x, int y, int width, int height);
-    void CreateInput(int id, std::string text, int x, int y, int width, int height);
-    void CreateComboBox(int id,int x, int y, int width, int height, std::vector<std::string> items);
-    void CreateImg(int id, std::string path, int x, int y, int width, int height);
     void AddOnClick(int id, std::function<void()> onClick);
-    void AddLayout(int id, int x, int y, int width, int height);
-    void SetHorizontalLayoutAuto(int id);
-    void SetHorizontalLayout(int id, int offset);
-    void SetVerticalLayoutAuto(int id);
-    void SetVerticalLayout(int id, int offset);
+    
     int GenerateId(){
         return ++uiCount;
     }
@@ -52,6 +46,8 @@ public:
     void SetText(int id, std::string text);
     std::string GetText(int id);
     void UIClick(int id);
+    HICON GetWindowIcon(HWND hwnd);
+    HICON ResizeImage(HICON hIcon, int width, int height);
 };
 
 
