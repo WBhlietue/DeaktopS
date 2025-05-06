@@ -60,14 +60,25 @@ HICON GetWindowIcon(HWND hwnd) {
 }
 
 void RePosAnsSize(Window window, float value){
-    int height = 2*buttonOffset + buttonSize;
-    int width = 2*buttonOffset + buttonSize*titles.size() + buttonOffset*(titles.size()-1);
+    // int height = 2*buttonOffset + buttonSize;
+    // int width = 2*buttonOffset + buttonSize*titles.size() + buttonOffset*(titles.size()-1);
+    // int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    // int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    // SetWindowPos(window.hwnd, HWND_TOPMOST, (screenWidth-width)/2, screenHeight-height+((1-value)*(1-value)*height), width, height,   SWP_NOACTIVATE |SWP_NOZORDER);
+    // for(int i = 0; i < titles.size(); i++){
+    //     SetWindowPos(titles[i].button, HWND_TOP, buttonOffset+i*(buttonSize+buttonOffset) , buttonOffset, buttonSize, buttonSize, SWP_NOSIZE);
+    // }
+
+    int width = 2*buttonOffset + buttonSize;
+    int height = 2*buttonOffset + buttonSize*titles.size() + buttonOffset*(titles.size()-1);
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-    SetWindowPos(window.hwnd, HWND_TOP, (screenWidth-width)/2, screenHeight-height+((1-value)*(1-value)*height), width, height,   SWP_NOZORDER);
+    SetWindowPos(window.hwnd, HWND_TOPMOST,((value)*(value)*width)-width, (screenHeight-height)/2, width, height,   SWP_NOACTIVATE |SWP_NOZORDER);
     for(int i = 0; i < titles.size(); i++){
-        SetWindowPos(titles[i].button, HWND_TOP, buttonOffset+i*(buttonSize+buttonOffset) , buttonOffset, buttonSize, buttonSize, SWP_NOSIZE);
+        SetWindowPos(titles[i].button, HWND_TOP,buttonOffset, buttonOffset+i*(buttonSize+buttonOffset), buttonSize, buttonSize, SWP_NOSIZE);
     }
+
+    
 }
 
 int AddButton(Window* window, int i){
@@ -75,13 +86,20 @@ int AddButton(Window* window, int i){
     HICON hIcon = GetWindowIcon(hwnds[i]);
     hIcon = window->ResizeImage(hIcon, 32, 32);
     window->CreateButton(id, hIcon, 0, 0, buttonSize, buttonSize);
-    window->AddOnClick(id, [ i](){
+    window->AddOnClick(id, [window, i](){
         HWND hwnd = hwnds[i];
-        if (IsIconic(hwnd)) {
-            ShowWindow(hwnd, SW_RESTORE);
-        } else {
+        HWND foreground = GetForegroundWindow();
+        if (foreground == hwnd) {
             ShowWindow(hwnd, SW_MINIMIZE);
+        } else {
+            if (IsIconic(hwnd)) {
+                ShowWindow(hwnd, SW_RESTORE);
+            } else {
+                ShowWindow(hwnd, SW_SHOW);
+            }
+            SetForegroundWindow(hwnd);
         }
+    
     });
     return id;
 }
@@ -91,6 +109,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     Window::Init(hInstance, nCmdShow);
     Window window;
     window.onCreate = [&window](){
+        SetWindowLong(window.hwnd, GWL_EXSTYLE, GetWindowLong(window.hwnd, GWL_EXSTYLE) | WS_EX_NOACTIVATE);
+
         thisHwnd = window.hwnd;
         SetWindowPos(
             window.hwnd,
