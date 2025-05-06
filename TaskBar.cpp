@@ -9,6 +9,7 @@ using namespace std;
 int a =0 ;
 int buttonSize = 40;
 int buttonOffset = 5;
+float num = 0;
 HWND thisHwnd;
 typedef struct{
     HWND windowTitle;
@@ -17,6 +18,8 @@ typedef struct{
 
 vector<WindowTitleSet> titles;
 vector<HWND> hwnds;
+bool isVisible = false;
+
 
 BOOL IsAltTabWindow(HWND hwnd) {
     if(hwnd == thisHwnd) return FALSE;
@@ -56,12 +59,12 @@ HICON GetWindowIcon(HWND hwnd) {
     return hIcon;
 }
 
-void RePosAnsSize(Window window){
+void RePosAnsSize(Window window, float value){
     int height = 2*buttonOffset + buttonSize;
     int width = 2*buttonOffset + buttonSize*titles.size() + buttonOffset*(titles.size()-1);
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-    SetWindowPos(window.hwnd, HWND_TOP, (screenWidth-width)/2, screenHeight-height, width, height,   SWP_NOZORDER);
+    SetWindowPos(window.hwnd, HWND_TOP, (screenWidth-width)/2, screenHeight-height+((1-value)*(1-value)*height), width, height,   SWP_NOZORDER);
     for(int i = 0; i < titles.size(); i++){
         SetWindowPos(titles[i].button, HWND_TOP, buttonOffset+i*(buttonSize+buttonOffset) , buttonOffset, buttonSize, buttonSize, SWP_NOSIZE);
     }
@@ -106,7 +109,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             set.button = window.GetElement(id);
             titles.push_back(set);
         }
-        RePosAnsSize(window);
+        RePosAnsSize(window, 0);
         Window::onTimer.push_back([ &window](){
             bool isChange = false;
             for(int i = 0; i < hwnds.size(); i++){
@@ -134,8 +137,35 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                     isChange = true;
                 }
             }
+            POINT pt;
+            GetCursorPos(&pt);
+            RECT winRect;
+            GetWindowRect(window.hwnd, &winRect);
+            bool inWindow = PtInRect(&winRect, pt);
+            int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+            int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+            int EDGE_THRESHOLD = 5;
+            bool atEdge =
+            pt.x <= EDGE_THRESHOLD || pt.y <= EDGE_THRESHOLD ||
+            pt.x >= screenWidth - EDGE_THRESHOLD || pt.y >= screenHeight - EDGE_THRESHOLD;
+            
+            if (atEdge || inWindow) {
+                if(num >= 1){
+                    num =1;
+                }else{
+                    isChange = true;   
+                    num += 0.1;
+                }
+            }  else {
+                if(num <= 0){
+                    num =0;
+                }else{   
+                    isChange = true;
+                    num -= 0.1;
+                }
+            }
             if(isChange){
-                RePosAnsSize(window);
+                RePosAnsSize(window, num);
             }
 
         });
