@@ -1,0 +1,1 @@
+g++ base.cpp main.cpp -o main; ./main
